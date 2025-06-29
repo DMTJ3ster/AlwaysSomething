@@ -56,6 +56,10 @@ class PodcastApp {
 
         // Keyboard navigation
         document.addEventListener('keydown', (e) => this.handleKeyboardNavigation(e));
+
+        // Handle user interaction for audio autoplay
+        document.addEventListener('click', () => this.handleFirstUserInteraction(), { once: true });
+        document.addEventListener('touchstart', () => this.handleFirstUserInteraction(), { once: true });
     }
 
     setupAudioPlayer() {
@@ -64,28 +68,41 @@ class PodcastApp {
         const playIcon = document.getElementById('playIcon');
         const volumeBtn = document.getElementById('volumeBtn');
         const volumeIcon = document.getElementById('volumeIcon');
+        const audioStatus = document.querySelector('.audio-status');
 
         if (!audio || !playPauseBtn) return;
 
         let isPlaying = false;
         let isMuted = false;
+        let hasUserInteracted = false;
 
         // Set initial volume
         audio.volume = 0.3;
 
+        // Update initial status
+        if (audioStatus) {
+            audioStatus.textContent = 'Click to play';
+        }
+
         // Play/Pause functionality
-        playPauseBtn.addEventListener('click', () => {
+        playPauseBtn.addEventListener('click', async () => {
+            hasUserInteracted = true;
+            
             if (isPlaying) {
                 audio.pause();
-                playIcon.className = 'fas fa-play';
-                isPlaying = false;
             } else {
-                audio.play().catch(e => {
-                    console.log('Audio play failed:', e);
-                    this.showNotification('Audio playback requires user interaction', 'info');
-                });
-                playIcon.className = 'fas fa-pause';
-                isPlaying = true;
+                try {
+                    await audio.play();
+                    if (audioStatus) {
+                        audioStatus.textContent = 'Now playing';
+                    }
+                } catch (error) {
+                    console.log('Audio play failed:', error);
+                    this.showNotification('Unable to play audio. Please check your browser settings.', 'warning');
+                    if (audioStatus) {
+                        audioStatus.textContent = 'Playback failed';
+                    }
+                }
             }
         });
 
@@ -108,17 +125,59 @@ class PodcastApp {
         audio.addEventListener('play', () => {
             playIcon.className = 'fas fa-pause';
             isPlaying = true;
+            if (audioStatus) {
+                audioStatus.textContent = 'Now playing';
+            }
         });
 
         audio.addEventListener('pause', () => {
             playIcon.className = 'fas fa-play';
             isPlaying = false;
+            if (audioStatus) {
+                audioStatus.textContent = 'Paused';
+            }
+        });
+
+        audio.addEventListener('ended', () => {
+            playIcon.className = 'fas fa-play';
+            isPlaying = false;
+            if (audioStatus) {
+                audioStatus.textContent = 'Ended';
+            }
         });
 
         audio.addEventListener('error', (e) => {
             console.log('Audio error:', e);
             this.showNotification('Unable to load background music', 'warning');
+            if (audioStatus) {
+                audioStatus.textContent = 'Audio unavailable';
+            }
         });
+
+        audio.addEventListener('loadstart', () => {
+            if (audioStatus) {
+                audioStatus.textContent = 'Loading...';
+            }
+        });
+
+        audio.addEventListener('canplay', () => {
+            if (audioStatus && !isPlaying) {
+                audioStatus.textContent = 'Ready to play';
+            }
+        });
+
+        // Try to preload audio
+        audio.preload = 'metadata';
+    }
+
+    handleFirstUserInteraction() {
+        // This function is called on the first user interaction
+        // We can now attempt to play audio if needed
+        const audio = document.getElementById('backgroundAudio');
+        if (audio) {
+            // Just prepare the audio, don't auto-play
+            audio.load();
+        }
     }
 
     setupScrollEffects() {
@@ -383,8 +442,9 @@ document.addEventListener('DOMContentLoaded', () => {
 // Handle page visibility changes (pause audio when tab is hidden)
 document.addEventListener('visibilitychange', () => {
     const audio = document.getElementById('backgroundAudio');
-    if (audio && !document.hidden) {
-        // Page is visible again - audio will continue if it was playing
+    if (audio && document.hidden) {
+        // Optionally pause when tab becomes hidden
+        // audio.pause();
     }
 });
 

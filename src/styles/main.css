@@ -287,11 +287,32 @@ body {
     justify-content: center;
     cursor: pointer;
     transition: var(--transition-fast);
+    position: relative;
 }
 
 .audio-btn:hover {
     background: var(--primary-dark);
     transform: scale(1.05);
+}
+
+.audio-btn:active {
+    transform: scale(0.95);
+}
+
+.audio-btn.loading::after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    border: 2px solid rgba(255, 255, 255, 0.3);
+    border-top: 2px solid white;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
 }
 
 .audio-info {
@@ -313,6 +334,15 @@ body {
     display: block;
     font-size: var(--font-size-xs);
     color: var(--gray-500);
+    transition: color var(--transition-fast);
+}
+
+.audio-status.playing {
+    color: var(--primary);
+}
+
+.audio-status.error {
+    color: var(--error);
 }
 
 .volume-btn {
